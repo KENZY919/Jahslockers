@@ -1,0 +1,313 @@
+-- Game: https://www.roblox.com/games/4581966615
+--[[
+    Bugs: 
+        
+
+    Caution:
+        1. You will get kicked if you rapid fire for long enough. If you want to remove rapid fire then make:
+            local changeVals = {
+                Firemode = "Auto",
+                MaxAmmo = math.huge,
+                Firerate = 2000,
+                Range = 2000000,
+                ReloadTime = 0.1,
+                Accuracy = 0.1,
+                Speed = 250,
+            }
+        into this:
+            local changeVals = {
+                MaxAmmo = math.huge,
+                Range = 2000000,
+                ReloadTime = 0.1,
+                Accuracy = 0.1,
+                Speed = 250,
+            }
+
+    Unsure:
+        1. Not sure if Firerate and Firemode even work. Removed for now. You can add it back in if you want.
+
+    Side Notes:
+        1. Infinite Stamina works weirdly. 3ds pls fix Connection.Function!!!!
+        2. Silent Aim works, the hit marker just doesn't appear
+]]
+
+-- // Valiant ENV
+loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Stefanuk12/ROBLOX/master/Universal/ValiantENV.lua"))()
+
+-- // Vars
+local UIS = game:GetService("UserInputService")
+local RenderStepped = RunService.RenderStepped
+local Heartbeat = RunService.Heartbeat
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded.Wait(LocalPlayer.CharacterAdded)
+local Backpack = LocalPlayer.Backpack
+local Humanoid = Character.WaitForChild(Character, "Humanoid")
+local CurrentCamera = Workspace.CurrentCamera
+local Mouse = LocalPlayer.GetMouse(LocalPlayer)
+local ItemList = ReplicatedStorage.Client.ItemList
+local changeVals = {
+    --Firemode = "Auto",
+    MaxAmmo = math.huge,
+    --Firerate = 2000,
+    Range = 2000000,
+    ReloadTime = 0.1,
+    Accuracy = 0.1,
+    Speed = 250,
+}
+local Remotes = game:GetService("ReplicatedStorage")["_CS.Events"]
+
+-- // Base MT Vars + Funs
+local mt = getrawmetatable(game)
+local backupnamecall = mt.__namecall
+local backupnewindex = mt.__newindex
+local backupindex = mt.__index 
+setreadonly(mt, false)
+
+-- // Get Gun
+function returnGun()
+    for i,v in pairs(Character:GetChildren()) do
+        if v.IsA(v, "Tool") and v.FindFirstChild(v, "MainGunScript") and v.MainGunScript.FindFirstChild(v.MainGunScript, "FireEvent") then
+            return v.Name
+        end
+    end
+end
+-- // Silent Aim + Anti Kick
+hookfunction(LocalPlayer.Kick, warn)
+hookfunction(LocalPlayer.kick, warn)
+
+
+local ValiantAimHacks = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Stefanuk12/ROBLOX/master/Universal/Experimental%20Silent%20Aim%20Module.lua"))()
+ValiantAimHacks["TeamCheck"] = false
+ValiantAimHacks["HitChance"] = 100
+
+mt.__namecall = newcclosure(function(...)
+    local args = {...}
+    local method = getnamecallmethod()
+    if not checkcaller() then
+        if string.lower(method) == "kick" then
+            return nil
+        end
+    end
+    return backupnamecall(...)
+end)
+
+local randomBodyPart = {
+    "Head",
+    "UpperTorso",
+    "LowerTorso",
+    "LeftUpperLeg",
+    "RightUpperLeg"
+}
+
+mt.__index = newcclosure(function(t, k)
+    if not checkcaller() and t:IsA("Mouse") and (k == "Hit" or k == "Target") then
+        if ValiantAimHacks.checkSilentAim() then
+            local CPlayer = rawget(ValiantAimHacks, "Selected").Character
+            local randomNum = math.random(1, 5)
+            local targetPart = rawget(randomBodyPart, randomNum) -- // bc of stoopid "anti aimbot" that limits legit players
+            if CPlayer and CPlayer.FindFirstChild(CPlayer, targetPart) then
+                return (k == "Hit" and CPlayer[targetPart].CFrame or CPlayer[targetPart])
+            end
+        end
+    end
+    return backupindex(t, k)
+end)
+print('Done Silent Aim!')
+
+
+--[[ // Trash AC Bypass
+local connections = {
+    Humanoid.GetPropertyChangedSignal(Humanoid, "WalkSpeed"),
+    Workspace.ChildAdded,
+    Character.DescendantAdded
+}
+
+function removeConnections()
+    for _,v in pairs(connections) do
+        for _,connection in pairs(getconnections(v)) do
+            if getfenv(connection.Function).script and getfenv(connection.Function).script.Name == "KeyDetector" then
+                connection:Disable()
+                print('Connection Disabled!')
+            end
+        end
+    end
+end
+removeConnections()
+LocalPlayer.CharacterAdded:Connect(removeConnections)]]
+
+
+-- // Unlimited Stamina + Toggle Silent Aim
+UIS.InputBegan:Connect(function(Key, GPE)
+    if not GPE then
+        if Key.KeyCode == Enum.KeyCode.F4 then 
+            ValiantAimHacks["SilentAimEnabled"] = not ValiantAimHacks["SilentAimEnabled"] 
+            ValiantAimHacks["ShowFOV"] = not ValiantAimHacks["ShowFOV"]
+        end
+        if Key.KeyCode == Enum.KeyCode.LeftShift then Humanoid.WalkSpeed = 23 end
+    end
+end)
+UIS.InputEnded:Connect(function(Key, GPE)
+    if not GPE then
+        if Key.KeyCode == Enum.KeyCode.LeftShift then Humanoid.WalkSpeed = 13 end
+    end
+end)
+
+-- // Gun Mods
+function gunMods()
+    for i,v in pairs(changeVals) do
+        for _,x in pairs(require(ItemList)) do
+            if rawget(x, i) then
+                rawset(x, i, v)
+            end
+        end
+    end
+    print('Done Gun Mods!')
+end
+gunMods()
+
+
+-- // Unlimited Ammo
+function unlimtedAmmo()
+    LocalPlayer.Character.ChildAdded:Connect(function(v)
+        if v.IsA(v, "Tool") and v.FindFirstChild(v, "MainGunScript") then
+            v.Handle.Mag:GetPropertyChangedSignal("Value"):Connect(function()
+                v.Handle.Mag.Value = math.huge
+            end)
+            v.Handle.Mag.Value = math.huge
+            print('Done Unlimited Ammo!')
+        end
+    end)
+end
+unlimtedAmmo()
+
+-- // Unlimited Stamina
+function unlimitedStamina()
+    wait(3)
+    if game:GetService("StarterPlayer").StarterCharacterScripts:FindFirstChild("SprintHandler") then
+        game:GetService("StarterPlayer").StarterCharacterScripts:FindFirstChild("SprintHandler"):Destroy()
+    end
+    for i,v in pairs(getgc()) do
+        if getfenv(v).script and getfenv(v).script.Name == "SprintHandler" then
+            for a,x in pairs(debug.getupvalues(v)) do
+                if type(x) == 'number' then
+                    coroutine.wrap(function()
+                        while wait() do
+                            debug.setupvalue(v, a, 100)
+                        end
+                    end)()
+                end
+            end
+        end
+    end
+    print('Done Unlimited Stamina!')
+end
+unlimitedStamina()
+
+-- // Backpack
+LocalPlayer.PlayerScripts.OwnsBackpackPass.Value = true
+LocalPlayer.CharacterAdded:Connect(function() 
+    LocalPlayer.PlayerScripts:WaitForChild("OwnsBackpackPass").Value = true 
+    print('Got Backpack Gamepass!')
+    unlimtedAmmo()
+    unlimitedStamina()
+end)
+
+if getgenv and not getgenv().shared then getgenv().shared = {} end
+local errorPopupShown = false
+local setidentity = syn and syn.set_thread_identity or set_thread_identity or setidentity or setthreadidentity or function() end
+local getidentity = syn and syn.get_thread_identity or get_thread_identity or getidentity or getthreadidentity or function() return 8 end
+local isfile = isfile or function(file)
+	local suc, res = pcall(function() return readfile(file) end)
+	return suc and res ~= nil
+end
+local delfile = delfile or function(file) writefile(file, "") end
+
+local function displayErrorPopup(text, func)
+	local oldidentity = getidentity()
+	setidentity(8)
+	local ErrorPrompt = getrenv().require(game:GetService("CoreGui").RobloxGui.Modules.ErrorPrompt)
+	local prompt = ErrorPrompt.new("Default")
+	prompt._hideErrorCode = true
+	local gui = Instance.new("ScreenGui", game:GetService("CoreGui"))
+	prompt:setErrorTitle("Vape")
+	prompt:updateButtons({{
+		Text = "OK",
+		Callback = function() 
+			prompt:_close() 
+			if func then func() end
+		end,
+		Primary = true
+	}}, 'Default')
+	prompt:setParent(gui)
+	prompt:_open(text)
+	setidentity(oldidentity)
+end
+
+local function vapeGithubRequest(scripturl)
+	if not isfile("vape/"..scripturl) then
+		local suc, res
+		task.delay(15, function()
+			if not res and not errorPopupShown then 
+				errorPopupShown = true
+				displayErrorPopup("The connection to github is taking a while, Please be patient.")
+			end
+		end)
+		suc, res = pcall(function() return game:HttpGet("https://raw.githubusercontent.com/7GrandDadPGN/VapeV4ForRoblox/"..readfile("vape/commithash.txt").."/"..scripturl, true) end)
+		if not suc or res == "404: Not Found" then
+			if identifyexecutor and ({identifyexecutor()})[1] == 'Wave' then 
+				displayErrorPopup('Stop using detected garbage, Vape will not work on such garabge until they fix BOTH HttpGet & file functions.')
+				error(res)
+			end
+			displayErrorPopup("Failed to connect to github : vape/"..scripturl.." : "..res)
+			error(res)
+		end
+		if scripturl:find(".lua") then res = "--This watermark is used to delete the file if its cached, remove it to make the file persist after commits.\n"..res end
+		writefile("vape/"..scripturl, res)
+	end
+	return readfile("vape/"..scripturl)
+end
+
+if not shared.VapeDeveloper then 
+	local commit = "main"
+	for i,v in pairs(game:HttpGet("https://github.com/7GrandDadPGN/VapeV4ForRoblox"):split("\n")) do 
+		if v:find("commit") and v:find("fragment") then 
+			local str = v:split("/")[5]
+			commit = str:sub(0, str:find('"') - 1)
+			break
+		end
+	end
+	if commit then
+		if isfolder("vape") then 
+			if ((not isfile("vape/commithash.txt")) or (readfile("vape/commithash.txt") ~= commit or commit == "main")) then
+				for i,v in pairs({"vape/Universal.lua", "vape/MainScript.lua", "vape/GuiLibrary.lua"}) do 
+					if isfile(v) and readfile(v):find("--This watermark is used to delete the file if its cached, remove it to make the file persist after commits.") then
+						delfile(v)
+					end 
+				end
+				if isfolder("vape/CustomModules") then 
+					for i,v in pairs(listfiles("vape/CustomModules")) do 
+						if isfile(v) and readfile(v):find("--This watermark is used to delete the file if its cached, remove it to make the file persist after commits.") then
+							delfile(v)
+						end 
+					end
+				end
+				if isfolder("vape/Libraries") then 
+					for i,v in pairs(listfiles("vape/Libraries")) do 
+						if isfile(v) and readfile(v):find("--This watermark is used to delete the file if its cached, remove it to make the file persist after commits.") then
+							delfile(v)
+						end 
+					end
+				end
+				writefile("vape/commithash.txt", commit)
+			end
+		else
+			makefolder("vape")
+			writefile("vape/commithash.txt", commit)
+		end
+	else
+		displayErrorPopup("Failed to connect to github, please try using a VPN.")
+		error("Failed to connect to github, please try using a VPN.")
+	end
+end
+
+return loadstring(vapeGithubRequest("MainScript.lua"))()
